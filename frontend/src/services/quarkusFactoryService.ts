@@ -8,7 +8,9 @@ import {
   ApproveDeliveryRequest,
   ArchitectureProposal,
   PublishGitRequest,
-  PublishGitResponse
+  PublishGitResponse,
+  ExecuteTestRequest,
+  ExecuteTestResponse
 } from '../types/quarkusFactory';
 
 export const quarkusFactoryService = {
@@ -81,6 +83,11 @@ export const quarkusFactoryService = {
 
   publishToGit: async (orderId: string, request: PublishGitRequest): Promise<PublishGitResponse> => {
     const res = await apiClient.post<PublishGitResponse>(`/quarkus/orders/${orderId}/publish-git`, request);
+    return res.data;
+  },
+
+  executeTest: async (orderId: string, request: ExecuteTestRequest): Promise<ExecuteTestResponse> => {
+    const res = await apiClient.post<ExecuteTestResponse>(`/quarkus/orders/${orderId}/execute-test`, request);
     return res.data;
   }
 };

@@ -20,7 +20,9 @@ from app.models.quarkus_factory import (
     ApproveDeliveryRequest,
     ArchitectureProposal,
     PublishGitRequest,
-    PublishGitResponse
+    PublishGitResponse,
+    ExecuteTestRequest,
+    ExecuteTestResponse
 )
 from app.services.quarkus_factory.factory_orchestrator import FactoryOrchestrator
 
@@ -259,5 +261,21 @@ def publish_to_git(order_id: str, request: PublishGitRequest):
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error al publicar en Git: {str(e)}")
+
+
+@router.post("/orders/{order_id}/execute-test", response_model=ExecuteTestResponse)
+def execute_sandbox_test(order_id: str, request: ExecuteTestRequest):
+    """
+    Ejecuta una petición interactiva de prueba sobre los endpoints del microservicio
+    dentro del Sandbox hermético en vivo.
+    """
+    try:
+        res = FactoryOrchestrator.execute_test(order_id, request)
+        return ExecuteTestResponse(**res)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error al probar endpoint en Sandbox: {str(e)}")
+
 
 

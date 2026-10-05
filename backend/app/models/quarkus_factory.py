@@ -293,6 +293,23 @@ class PublishGitResponse(BaseModel):
     message: str
 
 
+class ExecuteTestRequest(BaseModel):
+    method: str = Field(default="GET", description="Método HTTP (GET, POST, PUT, DELETE)")
+    path: str = Field(default="/api/v1/health", description="Ruta del endpoint generado")
+    payload: Optional[Dict[str, Any]] = Field(default=None, description="Cuerpo del request en formato JSON")
+
+
+class ExecuteTestResponse(BaseModel):
+    status_code: int = 200
+    latency_ms: int = 22
+    method: str
+    path: str
+    response_headers: Dict[str, str] = Field(default_factory=dict)
+    response_body: Any
+    summary: str
+
+
+
 
 # ==========================================
 # TRACKING & AUDITORÍA INTEGRAL DEL PEDIDO

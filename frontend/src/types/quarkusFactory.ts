@@ -325,4 +325,21 @@ export interface PublishGitResponse {
   message: string;
 }
 
+export interface ExecuteTestRequest {
+  method: string;
+  path: string;
+  payload?: any;
+}
+
+export interface ExecuteTestResponse {
+  status_code: number;
+  latency_ms: number;
+  method: string;
+  path: string;
+  response_headers: Record<string, string>;
+  response_body: any;
+  summary: string;
+}
+
+
 
