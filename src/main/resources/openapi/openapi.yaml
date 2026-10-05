@@ -1,0 +1,436 @@
+openapi: 3.1.0
+info:
+  title: Servicio de Fraude
+  description: Microservicio de misión crítica para la detección de sospecha de fraude,
+    evaluación de riesgo transaccional y bloqueo preventivo de tarjetas de crédito.
+  version: 1.0.0
+  contact:
+    name: Equipo de Fraude
+    email: fraude@example.com
+servers:
+- url: https://api.example.com/servicio-fraude
+  description: Servidor de producción
+tags:
+- name: Alertas
+  description: Operaciones relacionadas con alertas de fraude
+- name: Tarjetas
+  description: Operaciones de bloqueo y desbloqueo de tarjetas
+paths:
+  /alertas:
+    post:
+      tags:
+      - Alertas
+      summary: Registrar y evaluar alerta de fraude
+      description: Recibe un evento transaccional sospechoso, calcula un score de
+        riesgo (0-100) y asigna un nivel de severidad (BAJO, MEDIO, ALTO, CRÍTICO).
+      operationId: registrarAlerta
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertaRequest'
+      responses:
+        '201':
+          description: Alerta registrada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertaResponse'
+        '400':
+          description: Solicitud inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: No autorizado
+      security:
+      - bearerAuth: []
+    get:
+      tags:
+      - Alertas
+      summary: Listar alertas de fraude
+      description: Obtiene una lista de alertas de fraude filtradas por nivel de riesgo,
+        rango de fechas y estado.
+      operationId: listarAlertas
+      parameters:
+      - name: nivelRiesgo
+        in: query
+        description: Nivel de severidad de la alerta
+        required: false
+        schema:
+          type: string
+          enum:
+          - BAJO
+          - MEDIO
+          - ALTO
+          - CRITICO
+      - name: fechaDesde
+        in: query
+        description: Fecha de inicio del rango (formato ISO 8601)
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: fechaHasta
+        in: query
+        description: Fecha de fin del rango (formato ISO 8601)
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: estado
+        in: query
+        description: Estado de la alerta
+        required: false
+        schema:
+          type: string
+          enum:
+          - PENDIENTE_REVISION
+          - CONFIRMADO_FRAUDE
+          - FALSO_POSITIVO
+      responses:
+        '200':
+          description: Lista de alertas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AlertaResponse'
+        '400':
+          description: Parámetros inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: No autorizado
+      security:
+      - bearerAuth: []
+  /alertas/{id}:
+    get:
+      tags:
+      - Alertas
+      summary: Obtener detalle de alerta
+      description: Obtiene los detalles de una alerta de fraude por su ID.
+      operationId: obtenerAlerta
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID de la alerta
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Detalle de la alerta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertaResponse'
+        '404':
+          description: Alerta no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: No autorizado
+      security:
+      - bearerAuth: []
+  /tarjetas/{numeroTarjeta}/bloqueo:
+    put:
+      tags:
+      - Tarjetas
+      summary: Bloquear tarjeta por fraude
+      description: Ejecuta el bloqueo preventivo de una tarjeta de crédito, cambiando
+        su estado a BLOQUEADA_POR_FRAUDE, registrando el motivo y origen del bloqueo,
+        y cancelando tokens de autorización activos.
+      operationId: bloquearTarjeta
+      parameters:
+      - name: numeroTarjeta
+        in: path
+        required: true
+        description: Número de tarjeta de crédito
+        schema:
+          type: string
+          pattern: ^[0-9]{16}$
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BloqueoRequest'
+      responses:
+        '200':
+          description: Tarjeta bloqueada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BloqueoResponse'
+        '400':
+          description: Solicitud inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Tarjeta no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: No autorizado
+      security:
+      - bearerAuth: []
+  /tarjetas/{numeroTarjeta}/desbloqueo:
+    put:
+      tags:
+      - Tarjetas
+      summary: Desbloquear tarjeta con validación 2FA
+      description: Permite el desbloqueo de una tarjeta únicamente si el cliente aprueba
+        la validación de identidad con token de doble factor (2FA/OTP). Registra bitácora
+        de auditoría inmutable.
+      operationId: desbloquearTarjeta
+      parameters:
+      - name: numeroTarjeta
+        in: path
+        required: true
+        description: Número de tarjeta de crédito
+        schema:
+          type: string
+          pattern: ^[0-9]{16}$
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DesbloqueoRequest'
+      responses:
+        '200':
+          description: Tarjeta desbloqueada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DesbloqueoResponse'
+        '400':
+          description: Solicitud inválida o token 2FA incorrecto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Tarjeta no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: No autorizado
+      security:
+      - bearerAuth: []
+components:
+  schemas:
+    AlertaRequest:
+      type: object
+      required:
+      - clienteId
+      - numeroTarjeta
+      - monto
+      - moneda
+      - fechaTransaccion
+      - tipoEvento
+      properties:
+        clienteId:
+          type: string
+          format: uuid
+          description: ID del cliente
+        numeroTarjeta:
+          type: string
+          pattern: ^[0-9]{16}$
+          description: Número de tarjeta de crédito
+        monto:
+          type: number
+          format: double
+          description: Monto de la transacción
+        moneda:
+          type: string
+          description: Moneda de la transacción (ISO 4217)
+        fechaTransaccion:
+          type: string
+          format: date-time
+          description: Fecha y hora de la transacción
+        tipoEvento:
+          type: string
+          enum:
+          - MONTO_ANOMALO
+          - TRANSACCIONES_SIMULTANEAS
+          - INTENTOS_FALLIDOS_CVV
+          - INTENTOS_FALLIDOS_PIN
+          - COMERCIO_ALTO_RIESGO
+          description: Tipo de evento sospechoso
+        pais:
+          type: string
+          description: País donde ocurrió la transacción (ISO 3166-1 alpha-2)
+        comercio:
+          type: string
+          description: Nombre del comercio
+    AlertaResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID de la alerta
+        clienteId:
+          type: string
+          format: uuid
+          description: ID del cliente
+        numeroTarjeta:
+          type: string
+          description: Número de tarjeta enmascarado
+        scoreRiesgo:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Score de riesgo calculado (0-100)
+        nivelSeveridad:
+          type: string
+          enum:
+          - BAJO
+          - MEDIO
+          - ALTO
+          - CRITICO
+          description: Nivel de severidad asignado
+        estado:
+          type: string
+          enum:
+          - PENDIENTE_REVISION
+          - CONFIRMADO_FRAUDE
+          - FALSO_POSITIVO
+          description: Estado de la alerta
+        fechaCreacion:
+          type: string
+          format: date-time
+          description: Fecha de creación de la alerta
+        fechaActualizacion:
+          type: string
+          format: date-time
+          description: Fecha de última actualización
+        detalles:
+          type: object
+          description: Detalles adicionales del evento
+          additionalProperties: true
+    BloqueoRequest:
+      type: object
+      required:
+      - motivo
+      - origen
+      properties:
+        motivo:
+          type: string
+          description: Motivo del bloqueo
+        origen:
+          type: string
+          enum:
+          - MOTOR_AUTOMATICO
+          - ANALISTA_ANTIFRAUDE
+          description: Origen del bloqueo
+        analistaId:
+          type: string
+          format: uuid
+          description: ID del analista que ejecuta el bloqueo (si aplica)
+    BloqueoResponse:
+      type: object
+      properties:
+        numeroTarjeta:
+          type: string
+          description: Número de tarjeta enmascarado
+        estado:
+          type: string
+          enum:
+          - BLOQUEADA_POR_FRAUDE
+          description: Nuevo estado de la tarjeta
+        fechaBloqueo:
+          type: string
+          format: date-time
+          description: Fecha y hora del bloqueo
+        motivo:
+          type: string
+          description: Motivo del bloqueo
+        origen:
+          type: string
+          description: Origen del bloqueo
+        tokensCancelados:
+          type: integer
+          description: Cantidad de tokens de autorización cancelados
+    DesbloqueoRequest:
+      type: object
+      required:
+      - token2FA
+      - justificacion
+      properties:
+        token2FA:
+          type: string
+          description: Token de doble factor (OTP) para validar identidad
+        justificacion:
+          type: string
+          description: Justificación técnica del desbloqueo
+        usuarioResponsable:
+          type: string
+          description: Usuario que autoriza el desbloqueo
+    DesbloqueoResponse:
+      type: object
+      properties:
+        numeroTarjeta:
+          type: string
+          description: Número de tarjeta enmascarado
+        estado:
+          type: string
+          enum:
+          - ACTIVA
+          description: Nuevo estado de la tarjeta
+        fechaDesbloqueo:
+          type: string
+          format: date-time
+          description: Fecha y hora del desbloqueo
+        justificacion:
+          type: string
+          description: Justificación del desbloqueo
+        usuarioResponsable:
+          type: string
+          description: Usuario que autorizó el desbloqueo
+    ErrorResponse:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri
+          description: URI que identifica el tipo de error
+        title:
+          type: string
+          description: Título del error
+        status:
+          type: integer
+          description: Código de estado HTTP
+        detail:
+          type: string
+          description: Descripción detallada del error
+        instance:
+          type: string
+          format: uri
+          description: URI de la instancia específica del error
+      required:
+      - type
+      - title
+      - status
+      - detail
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

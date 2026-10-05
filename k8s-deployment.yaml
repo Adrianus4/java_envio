@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: servicio-fraude
+  labels:
+    app: servicio-fraude
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: servicio-fraude
+  template:
+    metadata:
+      labels:
+        app: servicio-fraude
+    spec:
+      containers:
+      - name: servicio-fraude
+        image: servicio-fraude:latest
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          httpGet:
+            path: /q/health/live
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /q/health/ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: servicio-fraude-service
+spec:
+  selector:
+    app: servicio-fraude
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: ClusterIP
